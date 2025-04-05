@@ -2,6 +2,8 @@ FROM --platform=$BUILDPLATFORM golang:1.24-alpine as build
 
 WORKDIR /work
 
+VOLUME /opt/golinks
+
 # Install git so that go build populates the VCS details in build info, which
 # is then reported to Tailscale in the node version string.
 RUN apk add git
@@ -23,4 +25,4 @@ ENV HOME /home/nonroot
 
 COPY --from=build /work/golink /golink
 ENTRYPOINT ["/golink"]
-CMD ["--sqlitedb", "/home/nonroot/golink.db", "--verbose"]
+CMD ["--sqlitedb", "/opt/golinks/golink.db", "--verbose"]
