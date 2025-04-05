@@ -19,7 +19,7 @@ RUN \
 
 FROM gcr.io/distroless/static-debian12:nonroot
 
-ENV HOME /home/nonroot
+ENV HOME /opt/golinks
 
 COPY --from=build /work/golink /golink
 ENTRYPOINT ["/golink"]
