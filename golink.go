@@ -146,7 +146,7 @@ func Run() error {
 	}
 
 	// if link specified on command line, resolve and exit
-	log.Printf("DEBUG: Checking flag.Args(), length: %d", len(flag.Args()))
+	log.Printf("DEBUG: Checking flag.Args(), length: %d, Args: %v", len(flag.Args()), flag.Args())
 	if len(flag.Args()) > 0 {
 		log.Printf("DEBUG: flag.Args() is > 0, processing link: %s", flag.Arg(0))
 		link, err := db.Load(flag.Arg(0))
