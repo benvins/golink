@@ -30,15 +30,11 @@ import (
 	"time"
 
 	"golang.org/x/net/xsrftoken"
-	"tailcfg"
 	"tailscale.com/client/tailscale"
 	"tailscale.com/hostinfo"
 	"tailscale.com/ipn"
-	"tailscale.com/smallz"
+	"tailscale.com/tailcfg"
 	"tailscale.com/tsnet"
-	"tailscale.com/tsweb"
-	"tailscale.com/types/logger"
-	"tailscale.com/types/views"
 	"tailscale.com/util/dnsname"
 )
 
@@ -58,24 +54,17 @@ const (
 )
 
 var (
-	verbose            = flag.Bool("verbose", false, "be verbose")
-	controlURL         = flag.String("control-url", ipn.DefaultControlURL, "the URL base of the control plane (i.e. coordination server)")
-	pgDSN              = flag.String("pgdsn", os.Getenv("DATABASE_URL"), "PostgreSQL Data Source Name (connection string). Can also be set via DATABASE_URL env var.")
-	dev                = flag.String("dev-listen", "", "if non-empty, listen on this addr and run in dev mode; auto-set pgdsn if empty and don't use tsnet")
-	useHTTPS           = flag.Bool("https", true, "serve golink over HTTPS if enabled on tailnet")
-	snapshot           = flag.String("snapshot", "", "file path of snapshot file (NOTE: --resolve-from-backup feature is currently disabled for PostgreSQL)")
-	hostname           = flag.String("hostname", defaultHostname, "service name")
-	configDir          = flag.String("config-dir", "", `tsnet configuration directory ("" to use default)`)
-	resolveFromBackup  = flag.String("resolve-from-backup", "", "resolve a link from snapshot file and exit (NOTE: --resolve-from-backup feature is currently disabled for PostgreSQL)")
-	allowUnknownUsers  = flag.Bool("allow-unknown-users", false, "allow unknown users to save links")
-	readonly           = flag.Bool("readonly", false, "start golink server in read-only mode")
-	listen             = flag.String("listen", ":80", "listen address for debug+admin server")
-	devListen          = flag.String("dev-listen", "", "if non-empty, listen on this address and run in dev mode")
-	allowedit          = flag.Bool("allow-edit", true, "allow editing of links")
-	allowdelete        = flag.Bool("allow-delete", true, "allow deleting of links")
-	allowrobots        = flag.Bool("allow-robots", false, "allow search engine robots")
-	googletrackingid   = flag.String("google-tracking-id", "", "Google Analytics tracking ID")
-	googlesiteverifyid = flag.String("google-site-verification", "", "Google Site Verification ID")
+	verbose           = flag.Bool("verbose", false, "be verbose")
+	controlURL        = flag.String("control-url", ipn.DefaultControlURL, "the URL base of the control plane (i.e. coordination server)")
+	pgDSN             = flag.String("pgdsn", os.Getenv("DATABASE_URL"), "PostgreSQL Data Source Name (connection string). Can also be set via DATABASE_URL env var.")
+	dev               = flag.String("dev-listen", "", "if non-empty, listen on this addr and run in dev mode; auto-set pgdsn if empty and don't use tsnet")
+	useHTTPS          = flag.Bool("https", true, "serve golink over HTTPS if enabled on tailnet")
+	snapshot          = flag.String("snapshot", "", "file path of snapshot file (NOTE: --resolve-from-backup feature is currently disabled for PostgreSQL)")
+	hostname          = flag.String("hostname", defaultHostname, "service name")
+	configDir         = flag.String("config-dir", "", `tsnet configuration directory ("" to use default)`)
+	resolveFromBackup = flag.String("resolve-from-backup", "", "resolve a link from snapshot file and exit (NOTE: This feature is currently disabled for PostgreSQL)")
+	allowUnknownUsers = flag.Bool("allow-unknown-users", false, "allow unknown users to save links")
+	readonly          = flag.Bool("readonly", false, "start golink server in read-only mode")
 )
 
 var stats struct {
