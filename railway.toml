@@ -8,11 +8,6 @@ dockerfilePath = "Dockerfile"
 
 # This section configures the deployment and runtime behavior.
 [deploy]
-# Railway will use this path to perform health checks on your application.
-# The root path "/" of golink should return a 200 OK if the server is running.
-healthcheckPath = "/"
-healthcheckTimeout = 300 # 5 minutes, generous timeout for a Go app
-
 # Defines how Railway should handle failures.
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10 # Attempt to restart up to 10 times on failure
@@ -29,4 +24,14 @@ watchPatterns = [
     "static/*",
     "Dockerfile",
     "railway.toml"
-] 
+]
+
+# This section configures health checks for your service.
+# Railway will periodically send an HTTP GET request to this path.
+# If it doesn't receive a 2xx response within the timeout,
+# it will consider the service unhealthy and may restart it.
+[healthcheck]
+path = "/healthz" # Updated health check path
+timeout = 10 # seconds
+interval = 30 # seconds
+retries = 3 
