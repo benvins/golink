@@ -29,4 +29,4 @@ ENTRYPOINT ["/golink"]
 # Assumes a persistent volume is mounted at /data by Railway for --config-dir.
 # The Go app will use $DATABASE_URL for --pgdsn by default.
 # TS_AUTHKEY from env will be used by tsnet for authentication.
-CMD ["--verbose", "--hostname=go", "--config-dir=/data/tsnet-state"] 
+CMD ["--verbose", "--config-dir=/data/tsnet-state"] 
