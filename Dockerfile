@@ -20,7 +20,7 @@ RUN \
 FROM gcr.io/distroless/static-debian12:nonroot
 
 
-ENV HOME /home/nonroot
+ENV HOME $VOLUME_HOME_DIR
 ENV DATABASE_URL $DATABASE_URL
 # The DATABASE_URL environment variable should be set when running the container.
 # Example: docker run -e DATABASE_URL="postgres://user:pass@host:port/dbname?sslmode=disable" your-golink-image
