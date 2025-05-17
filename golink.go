@@ -135,7 +135,7 @@ func Run() error {
 			var errReadSnapshot error
 			LastSnapshot, errReadSnapshot = os.ReadFile(*snapshot)
 			if errReadSnapshot != nil {
-				log.Fatalf("error reading snapshot file %q: %v", *snapshot, errReadSnapshot)
+				log.Fatalf("ATTEMPTING TO READ SNAPSHOT: error reading snapshot file specified by --snapshot flag (value: %q): %v", *snapshot, errReadSnapshot)
 			}
 		}
 	}
