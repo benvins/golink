@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"net/url"
 	"strings"
 	"sync"
@@ -184,37 +185,32 @@ func (s *PostgresDB) Delete(short string) error {
 
 // LoadStats returns click stats for links.
 func (s *PostgresDB) LoadStats() (ClickStats, error) {
-	allLinks, err := s.LoadAll()
+	log.Println("DEBUG: PostgresDB.LoadStats() called")
+	rows, err := s.db.Query("SELECT ID, SUM(Clicks) FROM Stats GROUP BY ID")
 	if err != nil {
-		return nil, err
+		log.Printf("DEBUG: PostgresDB.LoadStats() db.Query error: %v", err)
+		return nil, fmt.Errorf("querying stats: %w", err)
 	}
-	linkmap := make(map[string]string, len(allLinks)) // map ID => Short
-	for _, link := range allLinks {
-		linkmap[linkID(link.Short)] = link.Short
-	}
+	defer rows.Close()
 
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	rows, err := s.db.Query("SELECT ID, sum(Clicks) FROM Stats GROUP BY ID")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close() // Ensure rows are closed
-	stats := make(map[string]int)
+	stats := make(ClickStats)
+	log.Println("DEBUG: PostgresDB.LoadStats() entering row scan loop")
 	for rows.Next() {
 		var id string
 		var clicks int
-		err := rows.Scan(&id, &clicks)
-		if err != nil {
-			return nil, err
+		if err := rows.Scan(&id, &clicks); err != nil {
+			log.Printf("DEBUG: PostgresDB.LoadStats() rows.Scan error: %v", err)
+			return nil, fmt.Errorf("scanning stat row: %w", err)
 		}
-		short, ok := linkmap[id]
-		if ok { // Only include stats for links that still exist
-			stats[short] = clicks
-		}
+		stats[id] = clicks
 	}
-	return stats, rows.Err()
+	log.Println("DEBUG: PostgresDB.LoadStats() exited row scan loop")
+	if err := rows.Err(); err != nil {
+		log.Printf("DEBUG: PostgresDB.LoadStats() rows.Err error: %v", err)
+		return nil, fmt.Errorf("stat rows.Err: %w", err)
+	}
+	log.Println("DEBUG: PostgresDB.LoadStats() successful")
+	return stats, nil
 }
 
 // SaveStats records click stats for links. The provided map includes
