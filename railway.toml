@@ -8,10 +8,9 @@ dockerfilePath = "Dockerfile"
 
 # This section configures the deployment and runtime behavior.
 [deploy]
-startCommand = "/golink --verbose --dev-listen=0.0.0.0:$PORT --pgdsn=$DATABASE_URL" # Ensure this is exactly what Railway uses.
-# Defines how Railway should handle failures.
+# startCommand has been removed. Railway will use the CMD and ENTRYPOINT from the Dockerfile.
 restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 1 # Attempt to restart up to 10 times on failure
+restartPolicyMaxRetries = 10
 
 # Optional: This section can define files and directories to watch.
 # Changes to these files can trigger automatic rebuilds on Railway if connected to a Git repo.
@@ -24,15 +23,18 @@ watchPatterns = [
     "tmpl/*",
     "static/*",
     "Dockerfile",
-    "railway.toml"
+    "railway.toml",
+    "entrypoint.sh"
 ]
 
-# This section configures health checks for your service.
-# Railway will periodically send an HTTP GET request to this path.
-# If it doesn't receive a 2xx response within the timeout,
-# it will consider the service unhealthy and may restart it.
+# This section defines health checks for your application.
+# Railway uses these to determine if your deployment is healthy.
 [healthcheck]
-path = "/healthz" # Updated health check path
-timeout = 10 # seconds
-interval = 30 # seconds
+# HTTP path for the health check.
+path = "/healthz"
+# How often (in seconds) to perform the health check.
+interval = "30s"
+# How long (in seconds) to wait for a response before timing out.
+timeout = "5s"
+# Number of consecutive failed health checks before marking the deployment as unhealthy.
 retries = 3 
