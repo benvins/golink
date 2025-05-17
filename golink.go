@@ -137,6 +137,7 @@ func Run() error {
 	}
 	log.Println("DEBUG: NewPostgresDB call successful")
 
+	log.Println("DEBUG: About to call initStats()")
 	if err := initStats(); err != nil {
 		log.Printf("ERROR: initStats failed: %v", err)
 		// Potentially return err here if initStats failure is critical before tsnet
@@ -346,6 +347,7 @@ func newTemplate(files ...string) *template.Template {
 
 // initStats initializes the in-memory stats counter with counts from db.
 func initStats() error {
+	log.Println("DEBUG: initStats() called")
 	stats.mu.Lock()
 	defer stats.mu.Unlock()
 
