@@ -57,7 +57,7 @@ var (
 	verbose           = flag.Bool("verbose", false, "be verbose")
 	controlURL        = flag.String("control-url", ipn.DefaultControlURL, "the URL base of the control plane (i.e. coordination server)")
 	pgDSN             = flag.String("pgdsn", os.Getenv("DATABASE_URL"), "PostgreSQL Data Source Name (connection string). Can also be set via DATABASE_URL env var.")
-	dev               = flag.String("dev-listen", "", "if non-empty, listen on this addr and run in dev mode; auto-set pgdsn if empty and don't use tsnet")
+	devListen         = flag.String("dev-listen", "", "if non-empty, listen on this address (e.g., localhost:8080 or :ENV to use 0.0.0.0:$PORT) and run in dev mode; auto-set pgdsn if empty and don't use tsnet")
 	useHTTPS          = flag.Bool("https", true, "serve golink over HTTPS if enabled on tailnet")
 	snapshot          = flag.String("snapshot", "", "file path of snapshot file (NOTE: --resolve-from-backup feature is currently disabled for PostgreSQL)")
 	hostname          = flag.String("hostname", defaultHostname, "service name")
@@ -161,19 +161,29 @@ func Run() error {
 	// flush stats periodically
 	go flushStatsLoop()
 
-	if *dev != "" {
+	if *devListen != "" {
+		actualListenAddr := *devListen
+		if *devListen == ":ENV" {
+			port := os.Getenv("PORT")
+			if port == "" {
+				port = "8080" // Default if PORT is not set
+				log.Printf("Warning: PORT environment variable not set, defaulting dev listener to %s", "0.0.0.0:"+port)
+			}
+			actualListenAddr = "0.0.0.0:" + port
+		}
+
 		// override default hostname for dev mode
 		if *hostname == defaultHostname {
-			if h, p, err := net.SplitHostPort(*dev); err == nil {
-				if h == "" {
-					h = "localhost"
+			if h, p, err := net.SplitHostPort(actualListenAddr); err == nil {
+				if h == "" || h == "0.0.0.0" {
+					h = "localhost" // For display/logging, actual listen is on 0.0.0.0
 				}
 				*hostname = fmt.Sprintf("%s:%s", h, p)
 			}
 		}
 
-		log.Printf("Running in dev mode on %s ...", *dev)
-		log.Fatal(http.ListenAndServe(*dev, serveHandler()))
+		log.Printf("Running in dev mode on %s ...", actualListenAddr)
+		log.Fatal(http.ListenAndServe(actualListenAddr, serveHandler()))
 	}
 
 	if *hostname == "" {

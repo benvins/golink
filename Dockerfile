@@ -23,9 +23,8 @@ ENV HOME /home/nonroot
 # DATABASE_URL and PORT will be injected by Railway.
 
 COPY --from=build /work/golink /golink
-COPY --from=build /work/entrypoint.sh /entrypoint.sh
 
-RUN chmod +x /entrypoint.sh
-
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["--verbose"] # Default flags passed to entrypoint.sh 
+ENTRYPOINT ["/golink"]
+# The Go app will use $DATABASE_URL for --pgdsn by default.
+# It will use $PORT for --dev-listen when ":ENV" is passed.
+CMD ["--verbose", "--dev-listen", ":ENV"] 

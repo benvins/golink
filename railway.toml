@@ -23,8 +23,7 @@ watchPatterns = [
     "tmpl/*",
     "static/*",
     "Dockerfile",
-    "railway.toml",
-    "entrypoint.sh"
+    "railway.toml"
 ]
 
 # This section defines health checks for your application.
