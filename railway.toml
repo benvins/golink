@@ -8,6 +8,7 @@ dockerfilePath = "Dockerfile"
 
 # This section configures the deployment and runtime behavior.
 [deploy]
+startCommand = "/golink --verbose --dev-listen=0.0.0.0:$PORT --pgdsn=$DATABASE_URL" # Ensure this is exactly what Railway uses.
 # Defines how Railway should handle failures.
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 1 # Attempt to restart up to 10 times on failure
