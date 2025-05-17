@@ -761,7 +761,7 @@ func expandLink(long string, env expandEnv) (*url.URL, error) {
 	return u, nil
 }
 
-func devMode() bool { return *dev != "" }
+func devMode() bool { return *devListen != "" }
 
 const peerCapName = "tailscale.com/cap/golink"
 
