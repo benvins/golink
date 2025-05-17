@@ -141,28 +141,22 @@ func Run() error {
 	if err := initStats(); err != nil {
 		log.Printf("ERROR: initStats failed: %v", err)
 		// Potentially return err here if initStats failure is critical before tsnet
+	} else {
+		log.Println("DEBUG: initStats() completed successfully")
 	}
 
 	// if link specified on command line, resolve and exit
-	// This part should still work as resolveLink uses the db interface.
-	if flag.NArg() > 0 {
-		// The --resolve-from-backup flag functionality is currently disabled for PostgreSQL
-		// as noted above. If this code path is reached with that flag, it will likely fail
-		// or behave unexpectedly because the in-memory setup for pg is not handled here.
-		if *resolveFromBackup != "" {
-			log.Println("Warning: Resolving a link via --resolve-from-backup with PostgreSQL is not fully set up and might not work as expected.")
-		}
-		u, err := url.Parse(flag.Arg(0))
+	log.Printf("DEBUG: Checking flag.Args(), length: %d", len(flag.Args()))
+	if len(flag.Args()) > 0 {
+		log.Printf("DEBUG: flag.Args() is > 0, processing link: %s", flag.Arg(0))
+		link, err := db.Load(flag.Arg(0))
 		if err != nil {
 			log.Fatal(err)
 		}
-		dst, err := resolveLink(u)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(dst.String())
+		fmt.Println(link.Long)
 		os.Exit(0)
 	}
+	log.Println("DEBUG: flag.Args() block passed or not entered")
 
 	// flush stats periodically
 	go flushStatsLoop()
@@ -187,7 +181,7 @@ func Run() error {
 	}
 
 	log.Println("DEBUG: About to initialize tsnet.Server")
-	log.Printf("DEBUG: tsnet.Server Config - ControlURL: %s, Dir: %s, Hostname: %s", *controlURL, *configDir, *hostname)
+	log.Printf("DEBUG: tsnet.Server Config - ControlURL: %s, Dir: %q, Hostname: %s", *controlURL, *configDir, *hostname)
 	srv := &tsnet.Server{
 		ControlURL:   *controlURL,
 		Dir:          *configDir,
