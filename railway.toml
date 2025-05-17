@@ -8,18 +8,6 @@ dockerfilePath = "Dockerfile"
 
 # This section configures the deployment and runtime behavior.
 [deploy]
-# This command will be executed to start your application.
-# It overrides the CMD in your Dockerfile.
-# - We run the /golink binary (which is the ENTRYPOINT from your Dockerfile).
-# - --verbose: Enables verbose logging from your application.
-# - --dev-listen=0.0.0.0:$PORT: Puts golink in 'dev' mode which makes it listen
-#   as a standard HTTP server on the address and port provided. Railway injects
-#   the $PORT environment variable, and 0.0.0.0 ensures it listens on all network interfaces.
-# - --pgdsn=$DATABASE_URL: Explicitly tells golink to use the DATABASE_URL
-#   environment variable for the PostgreSQL connection string. Railway will
-#   inject DATABASE_URL if you link a PostgreSQL service, or you can set it manually.
-startCommand = "/golink --verbose --dev-listen=0.0.0.0:$PORT --pgdsn=$DATABASE_URL"
-
 # Railway will use this path to perform health checks on your application.
 # The root path "/" of golink should return a 200 OK if the server is running.
 healthcheckPath = "/"
