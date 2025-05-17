@@ -20,11 +20,13 @@ RUN \
 FROM gcr.io/distroless/static-debian12:nonroot
 
 ENV HOME /home/nonroot
-# DATABASE_URL and PORT will be injected by Railway.
+# DATABASE_URL and PORT (if needed by health check proxy) will be injected by Railway.
+# TS_AUTHKEY should be set in Railway service environment variables.
 
 COPY --from=build /work/golink /golink
 
 ENTRYPOINT ["/golink"]
+# Assumes a persistent volume is mounted at /data by Railway for --config-dir.
 # The Go app will use $DATABASE_URL for --pgdsn by default.
-# It will use $PORT for --dev-listen when ":ENV" is passed.
-CMD ["--verbose", "--dev-listen", ":ENV"] 
+# TS_AUTHKEY from env will be used by tsnet for authentication.
+CMD ["--verbose", "--hostname=go", "--config-dir=/data/tsnet-state"] 
