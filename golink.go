@@ -347,11 +347,19 @@ func initStats() error {
 
 	clicks, err := db.LoadStats()
 	if err != nil {
+		log.Printf("ERROR: db.LoadStats() returned error: %v", err)
 		return err
 	}
+	if clicks == nil {
+		log.Println("DEBUG: db.LoadStats() returned nil clicks map, initializing to empty map")
+		clicks = make(ClickStats)
+	}
 
+	log.Println("DEBUG: initStats - BEFORE stats.clicks = clicks")
 	stats.clicks = clicks
+	log.Println("DEBUG: initStats - AFTER stats.clicks = clicks, BEFORE stats.dirty = make(ClickStats)")
 	stats.dirty = make(ClickStats)
+	log.Println("DEBUG: initStats - AFTER stats.dirty = make(ClickStats)")
 
 	return nil
 }
