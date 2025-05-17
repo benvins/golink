@@ -88,47 +88,19 @@ var db *PostgresDB // Changed from SQLiteDB to PostgresDB
 var localClient *tailscale.LocalClient
 
 func Run() error {
+	log.Println("DEBUG: Run() called")
+
+	log.Println("DEBUG: About to call flag.Parse()")
 	flag.Parse()
+	log.Println("DEBUG: flag.Parse() completed")
+	log.Printf("DEBUG: Value of --snapshot flag: %q", *snapshot)
+	log.Printf("DEBUG: Value of --pgdsn flag: %q", *pgDSN)
 
 	hostinfo.SetApp("golink")
 
-	// // if resolving from backup, set pgdsn and snapshot flags to
-	// // restore links into an in-memory database.
-	// // THIS FEATURE IS CURRENTLY DISABLED FOR POSTGRESQL
-	// if *resolveFromBackup != "" {
-	// 	// For PostgreSQL, an in-memory setup is more complex than SQLite's ":memory:".
-	// 	// This would typically involve setting up a temporary PostgreSQL instance or using a library
-	// 	// that mocks a database. For now, this specific path is disabled.
-	// 	log.Println("Warning: --resolve-from-backup is currently not fully supported with PostgreSQL and may not work as expected.")
-	// 	// *pgDSN = "<your_temp_or_dev_pg_dsn_here>" // Placeholder, actual DSN needed
-	// 	snapshot = resolveFromBackup
-	// 	if flag.NArg() != 1 {
-	// 		log.Fatal("--resolve-from-backup also requires a link to be resolved")
-	// 	}
-	// }
-
-	if *pgDSN == "" {
-		if devMode() {
-			// In dev mode, you might want to set a default DSN for a local dev PostgreSQL instance
-			// e.g., *pgDSN = "postgres://user:password@localhost:5432/golink_dev?sslmode=disable"
-			// For now, we will require it to be set or fall through to the error.
-			log.Println("Dev mode: --pgdsn is not set. Consider setting a default or DATABASE_URL for development.")
-		}
-		// If still empty after dev mode check (or not in dev mode)
-		if *pgDSN == "" {
-			return errors.New("--pgdsn (or DATABASE_URL environment variable) is required")
-		}
-	}
-
-	var err error
-	if db, err = NewPostgresDB(*pgDSN); err != nil { // Changed from NewSQLiteDB
-		return fmt.Errorf("NewPostgresDB(%q): %w", *pgDSN, err)
-	}
-
-	// Snapshot restoration logic might need adjustment for PostgreSQL.
-	// The current restoreLastSnapshot directly uses `db.Save`, which has been adapted.
-	// However, the overall flow of snapshot/restore was designed with SQLite in mind.
+	log.Println("DEBUG: About to check snapshot flag")
 	if *snapshot != "" {
+		log.Printf("DEBUG: --snapshot flag is set to: %q", *snapshot)
 		if LastSnapshot != nil {
 			log.Printf("LastSnapshot already set; ignoring --snapshot")
 		} else {
@@ -138,10 +110,32 @@ func Run() error {
 				log.Fatalf("ATTEMPTING TO READ SNAPSHOT: error reading snapshot file specified by --snapshot flag (value: %q): %v", *snapshot, errReadSnapshot)
 			}
 		}
+	} else {
+		log.Println("DEBUG: --snapshot flag is empty, skipping snapshot read.")
 	}
+
 	if err := restoreLastSnapshot(); err != nil {
 		log.Printf("restoring snapshot: %v", err)
 	}
+
+	if *pgDSN == "" {
+		if devMode() {
+			log.Println("Dev mode: --pgdsn is not set. Consider setting a default or DATABASE_URL for development.")
+		}
+		if *pgDSN == "" {
+			log.Println("ERROR: --pgdsn (or DATABASE_URL environment variable) is required")
+			return errors.New("--pgdsn (or DATABASE_URL environment variable) is required")
+		}
+	}
+
+	var err error
+	log.Printf("DEBUG: About to call NewPostgresDB with DSN: %q", *pgDSN)
+	db, err = NewPostgresDB(*pgDSN)
+	if err != nil {
+		log.Printf("ERROR: NewPostgresDB failed: %v", err)
+		return fmt.Errorf("NewPostgresDB(%q): %w", *pgDSN, err)
+	}
+	log.Println("DEBUG: NewPostgresDB call successful")
 
 	if err := initStats(); err != nil {
 		log.Printf("initializing stats: %v", err)
