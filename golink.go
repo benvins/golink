@@ -138,7 +138,8 @@ func Run() error {
 	log.Println("DEBUG: NewPostgresDB call successful")
 
 	if err := initStats(); err != nil {
-		log.Printf("initializing stats: %v", err)
+		log.Printf("ERROR: initStats failed: %v", err)
+		// Potentially return err here if initStats failure is critical before tsnet
 	}
 
 	// if link specified on command line, resolve and exit
@@ -184,7 +185,8 @@ func Run() error {
 		return errors.New("--hostname, if specified, cannot be empty")
 	}
 
-	// create tsNet server and wait for it to be ready & connected.
+	log.Println("DEBUG: About to initialize tsnet.Server")
+	log.Printf("DEBUG: tsnet.Server Config - ControlURL: %s, Dir: %s, Hostname: %s", *controlURL, *configDir, *hostname)
 	srv := &tsnet.Server{
 		ControlURL:   *controlURL,
 		Dir:          *configDir,
@@ -195,9 +197,12 @@ func Run() error {
 	if *verbose {
 		srv.Logf = log.Printf
 	}
+	log.Println("DEBUG: About to call srv.Start() for tsnet.Server")
 	if err := srv.Start(); err != nil {
+		log.Printf("ERROR: tsnet.Server.Start() failed: %v", err)
 		return err
 	}
+	log.Println("DEBUG: tsnet.Server.Start() successful")
 
 	localClient, _ = srv.LocalClient()
 out:
