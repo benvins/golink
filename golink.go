@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -57,13 +56,13 @@ const (
 var (
 	verbose           = flag.Bool("verbose", false, "be verbose")
 	controlURL        = flag.String("control-url", ipn.DefaultControlURL, "the URL base of the control plane (i.e. coordination server)")
-	sqlitefile        = flag.String("sqlitedb", "", "path of SQLite database to store links")
-	dev               = flag.String("dev-listen", "", "if non-empty, listen on this addr and run in dev mode; auto-set sqlitedb if empty and don't use tsnet")
+	pgDSN             = flag.String("pgdsn", os.Getenv("DATABASE_URL"), "PostgreSQL Data Source Name (connection string). Can also be set via DATABASE_URL env var.")
+	dev               = flag.String("dev-listen", "", "if non-empty, listen on this addr and run in dev mode; auto-set pgdsn if empty and don't use tsnet")
 	useHTTPS          = flag.Bool("https", true, "serve golink over HTTPS if enabled on tailnet")
-	snapshot          = flag.String("snapshot", "", "file path of snapshot file")
+	snapshot          = flag.String("snapshot", "", "file path of snapshot file (NOTE: --resolve-from-backup feature is currently disabled for PostgreSQL)")
 	hostname          = flag.String("hostname", defaultHostname, "service name")
 	configDir         = flag.String("config-dir", "", `tsnet configuration directory ("" to use default)`)
-	resolveFromBackup = flag.String("resolve-from-backup", "", "resolve a link from snapshot file and exit")
+	resolveFromBackup = flag.String("resolve-from-backup", "", "resolve a link from snapshot file and exit (NOTE: This feature is currently disabled for PostgreSQL)")
 	allowUnknownUsers = flag.Bool("allow-unknown-users", false, "allow unknown users to save links")
 	readonly          = flag.Bool("readonly", false, "start golink server in read-only mode")
 )
@@ -84,7 +83,7 @@ var LastSnapshot []byte
 var embeddedFS embed.FS
 
 // db stores short links.
-var db *SQLiteDB
+var db *PostgresDB // Changed from SQLiteDB to PostgresDB
 
 var localClient *tailscale.LocalClient
 
@@ -93,54 +92,70 @@ func Run() error {
 
 	hostinfo.SetApp("golink")
 
-	// if resolving from backup, set sqlitefile and snapshot flags to
-	// restore links into an in-memory sqlite database.
-	if *resolveFromBackup != "" {
-		*sqlitefile = ":memory:"
-		snapshot = resolveFromBackup
-		if flag.NArg() != 1 {
-			log.Fatal("--resolve-from-backup also requires a link to be resolved")
-		}
-	}
+	// // if resolving from backup, set pgdsn and snapshot flags to
+	// // restore links into an in-memory database.
+	// // THIS FEATURE IS CURRENTLY DISABLED FOR POSTGRESQL
+	// if *resolveFromBackup != "" {
+	// 	// For PostgreSQL, an in-memory setup is more complex than SQLite's ":memory:".
+	// 	// This would typically involve setting up a temporary PostgreSQL instance or using a library
+	// 	// that mocks a database. For now, this specific path is disabled.
+	// 	log.Println("Warning: --resolve-from-backup is currently not fully supported with PostgreSQL and may not work as expected.")
+	// 	// *pgDSN = "<your_temp_or_dev_pg_dsn_here>" // Placeholder, actual DSN needed
+	// 	snapshot = resolveFromBackup
+	// 	if flag.NArg() != 1 {
+	// 		log.Fatal("--resolve-from-backup also requires a link to be resolved")
+	// 	}
+	// }
 
-	if *sqlitefile == "" {
+	if *pgDSN == "" {
 		if devMode() {
-			tmpdir, err := os.MkdirTemp("", "golink_dev_*")
-			if err != nil {
-				return err
-			}
-			*sqlitefile = filepath.Join(tmpdir, "golink.db")
-			log.Printf("Dev mode temp db: %s", *sqlitefile)
-		} else {
-			return errors.New("--sqlitedb is required")
+			// In dev mode, you might want to set a default DSN for a local dev PostgreSQL instance
+			// e.g., *pgDSN = "postgres://user:password@localhost:5432/golink_dev?sslmode=disable"
+			// For now, we will require it to be set or fall through to the error.
+			log.Println("Dev mode: --pgdsn is not set. Consider setting a default or DATABASE_URL for development.")
+		}
+		// If still empty after dev mode check (or not in dev mode)
+		if *pgDSN == "" {
+			return errors.New("--pgdsn (or DATABASE_URL environment variable) is required")
 		}
 	}
 
 	var err error
-	if db, err = NewSQLiteDB(*sqlitefile); err != nil {
-		return fmt.Errorf("NewSQLiteDB(%q): %w", *sqlitefile, err)
+	if db, err = NewPostgresDB(*pgDSN); err != nil { // Changed from NewSQLiteDB
+		return fmt.Errorf("NewPostgresDB(%q): %w", *pgDSN, err)
 	}
 
+	// Snapshot restoration logic might need adjustment for PostgreSQL.
+	// The current restoreLastSnapshot directly uses `db.Save`, which has been adapted.
+	// However, the overall flow of snapshot/restore was designed with SQLite in mind.
 	if *snapshot != "" {
 		if LastSnapshot != nil {
 			log.Printf("LastSnapshot already set; ignoring --snapshot")
 		} else {
-			var err error
-			LastSnapshot, err = os.ReadFile(*snapshot)
-			if err != nil {
-				log.Fatalf("error reading snapshot file %q: %v", *snapshot, err)
+			var errReadSnapshot error
+			LastSnapshot, errReadSnapshot = os.ReadFile(*snapshot)
+			if errReadSnapshot != nil {
+				log.Fatalf("error reading snapshot file %q: %v", *snapshot, errReadSnapshot)
 			}
 		}
 	}
 	if err := restoreLastSnapshot(); err != nil {
 		log.Printf("restoring snapshot: %v", err)
 	}
+
 	if err := initStats(); err != nil {
 		log.Printf("initializing stats: %v", err)
 	}
 
 	// if link specified on command line, resolve and exit
+	// This part should still work as resolveLink uses the db interface.
 	if flag.NArg() > 0 {
+		// The --resolve-from-backup flag functionality is currently disabled for PostgreSQL
+		// as noted above. If this code path is reached with that flag, it will likely fail
+		// or behave unexpectedly because the in-memory setup for pg is not handled here.
+		if *resolveFromBackup != "" {
+			log.Println("Warning: Resolving a link via --resolve-from-backup with PostgreSQL is not fully set up and might not work as expected.")
+		}
 		u, err := url.Parse(flag.Arg(0))
 		if err != nil {
 			log.Fatal(err)

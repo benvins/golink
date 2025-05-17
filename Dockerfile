@@ -19,8 +19,22 @@ RUN \
 
 FROM gcr.io/distroless/static-debian12:nonroot
 
+<<<<<<< HEAD
 ENV HOME /opt/golinks
 
 COPY --from=build /work/golink /golink
 ENTRYPOINT ["/golink"]
 CMD ["--sqlitedb", "/opt/golinks/golink.db", "--verbose"]
+=======
+ENV HOME /home/nonroot
+ENV DATABASE_URL $DATABASE_URL
+# The DATABASE_URL environment variable should be set when running the container.
+# Example: docker run -e DATABASE_URL="postgres://user:pass@host:port/dbname?sslmode=disable" your-golink-image
+
+COPY --from=build /work/golink /golink
+ENTRYPOINT ["/golink"]
+# Default CMD, expects DATABASE_URL to be set in the environment.
+# If DATABASE_URL is not set, --pgdsn will be empty and the application will exit with an error,
+# unless a default is set in the application for dev mode (which is currently not the case for production).
+CMD ["--verbose"] # --pgdsn will be picked from DATABASE_URL by the app
+>>>>>>> c0e09d5 (Removed sqlite and moved to postgres)
